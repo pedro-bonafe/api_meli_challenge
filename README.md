@@ -1,11 +1,6 @@
-Mis disculpas por el error de formato en la respuesta anterior. Tienes toda la razón; al intentar renderizarlo, se perdió la estructura de "código fuente" que necesitas para copiar y pegar.
-
-Aquí tienes el archivo **completo y corregido**. Todo está contenido dentro de un único bloque de código. Solo tienes que copiar el contenido de abajo y pegarlo en tu archivo `README.md`.
-
-```markdown
 # Name Matching API
 
-## 📋 Descripción General
+##  Descripción General
 
 Esta API permite comparar un nombre completo ingresado por un usuario contra una base de datos histórica de nombres, identificando posibles coincidencias y devolviendo un ranking ordenado por similitud.
 
