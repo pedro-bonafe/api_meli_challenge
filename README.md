@@ -12,7 +12,7 @@ El sistema fue diseñado para:
 
 ---
 
-## 🚀 Cómo ejecutar la API
+## Cómo ejecutar la API
 
 ### Requisitos
 * **Docker** + **Docker Compose**
@@ -28,12 +28,16 @@ docker compose up --build api_csv
 
 La API quedará disponible en:
 
-* **API Root:** http://localhost:8000
-* **Swagger (documentación interactiva):** http://localhost:8000/docs
+* **API Root:** 
+            api_csv → http://localhost:8000
+            api_sqlite → http://localhost:8001
+* **Swagger (documentación interactiva):** 
+            api_csv → http://localhost:8000/docs
+            api_sqlite → http://localhost:8001/docs
 
 ---
 
-## 📡 Endpoints Disponibles
+## Endpoints Disponibles
 
 ### 1. POST `/match`
 
@@ -143,7 +147,7 @@ Incluye:
 
 ---
 
-## 🏗 Arquitectura y construcción
+## Arquitectura y construcción
 
 ### Flujo general
 
@@ -167,8 +171,7 @@ Incluye:
 ### Decisiones técnicas clave
 
 #### ¿Por qué no separar nombre y apellido?
-
-El dataset no garantiza estructura semántica confiable (nombres compuestos, apellidos múltiples). Separar introduce heurísticas frágiles y empeora el ranking. **Se optó por trabajar sobre el nombre completo normalizado.**
+Esta fue la primer decisión tomada al analizar la estructura del dataset, dado que el dataset no garantiza estructura semántica confiable (nombres compuestos, apellidos múltiples). Separar introduce heurísticas frágiles y empeora el ranking. **Se optó por trabajar sobre el nombre completo normalizado.** En el .ipynb están los resultados del análisis implementado. 
 
 #### ¿Por qué Levenshtein + token similarity?
 
@@ -177,7 +180,7 @@ El dataset no garantiza estructura semántica confiable (nombres compuestos, ape
 * No requiere entrenamiento.
 * Es rápido y determinista.
 * Evita dependencia de modelos externos.
-
+En este sentido disponer de una api que tenga buena performance sin necesidad de entrenar un modelo suma mucho en cuanto a la simpleza de la arquitectura y la eficiencia. 
 #### ¿Por qué devolver resultados como lista?
 
 Los objetos JSON no garantizan orden. El enunciado requiere resultados ordenados, por lo que el ranking se devuelve como lista ordenada, y el mapa por ID se incluye solo como complemento.
@@ -204,7 +207,7 @@ docker compose up --build api_sqlite
 
 ---
 
-## 📈 Escalabilidad a producción
+## Escalabilidad a producción
 
 El diseño permite escalar sin reescribir la API. La separación clara entre **API**, **storage** y **search engine** permite evolucionar cada capa de forma independiente:
 
@@ -216,10 +219,7 @@ El diseño permite escalar sin reescribir la API. La separación clara entre **A
 
 ---
 
-## ✅ Conclusión
+## Conclusión
 
 Esta API fue diseñada priorizando **precisión**, **explicabilidad**, **rendimiento** y **buenas prácticas de ingeniería**. El resultado es una solución robusta, defendible en entrevista técnica y lista para evolucionar a un entorno productivo.
 
-```
-
-```
