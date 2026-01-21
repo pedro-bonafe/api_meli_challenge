@@ -28,12 +28,10 @@ docker compose up --build api_csv
 
 La API quedará disponible en:
 
-* **API Root:** 
-            * api_csv → http://localhost:8000
-            * api_sqlite → http://localhost:8001
-* **Swagger (documentación interactiva):** 
-            api_csv → http://localhost:8000/docs
-            api_sqlite → http://localhost:8001/docs
+* **API Root:** * `api_csv` → http://localhost:8000
+  * `api_sqlite` → http://localhost:8001
+* **Swagger (documentación interactiva):** * `api_csv` → http://localhost:8000/docs
+  * `api_sqlite` → http://localhost:8001/docs
 
 ---
 
