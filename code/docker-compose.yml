@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  api_csv:
+    build: .
+    container_name: meli_api_csv
+    environment:
+      - STORAGE=csv
+      - CSV_PATH=names_dataset.csv
+      - CACHE_MAX=256
+      - NGRAM_N=3
+      - MAX_CANDIDATES=2000
+    ports:
+      - "8000:8000"
+
+  api_sqlite:
+    build: .
+    container_name: meli_api_sqlite
+    environment:
+      - STORAGE=sqlite
+      - CSV_PATH=names_dataset.csv
+      - SQLITE_PATH=/data/names.db
+      - SQLITE_FORCE_RELOAD=false
+      - CACHE_MAX=256
+      - NGRAM_N=3
+      - MAX_CANDIDATES=2000
+    volumes:
+      - sqlite_data:/data
+    ports:
+      - "8001:8000"
+
+volumes:
+  sqlite_data:
