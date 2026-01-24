@@ -1,18 +1,18 @@
-version: "3.9"
-
 services:
   api_csv:
     build: .
     container_name: meli_api_csv
     environment:
       - STORAGE=csv
-      - CSV_PATH=names_dataset.csv
+      - DATA_ROOT=/app/data
+      - DATASET_MODE=standardized+dedupe
       - CACHE_MAX=256
       - NGRAM_N=3
       - MAX_CANDIDATES=2000
     ports:
       - "8000:8000"
-    
+    volumes:
+      - ./data:/app/data
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()\""]
       interval: 10s
@@ -26,17 +26,19 @@ services:
     container_name: meli_api_sqlite
     environment:
       - STORAGE=sqlite
-      - CSV_PATH=names_dataset.csv
+      # Si tu storage sqlite necesita un CSV para bootstrap, pasale el RAW explícito:
+      - DATA_ROOT=/app/data
+      - DATASET_MODE=standardized+dedupe
       - SQLITE_PATH=/data/names.db
-      - SQLITE_FORCE_RELOAD=false
+      - SQLITE_FORCE_RELOAD=true
       - CACHE_MAX=256
       - NGRAM_N=3
       - MAX_CANDIDATES=2000
     volumes:
+      - ./data:/app/data
       - sqlite_data:/data
     ports:
       - "8001:8000"
-
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()\""]
       interval: 10s

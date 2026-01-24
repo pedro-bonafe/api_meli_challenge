@@ -1,10 +1,11 @@
+# code/search_engine.py
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 from collections import defaultdict
 
-from storage import NameRecord, NameRepository
-from matching import char_ngrams
+from .storage import NameRecord, NameRepository
+from .matching import char_ngrams
 from rapidfuzz import fuzz
 
 
@@ -18,10 +19,10 @@ class SearchEngine:
     """
     - Índice invertido por n-grams
     - Candidate generation + scoring explicable
-    - Orden determinístico y correcto:
-        1) similarity (sin redondear) desc
-        2) token_score desc
-        3) edit_score desc
+    - Orden determinístico:
+        1) similarity RAW desc
+        2) token_score RAW desc
+        3) edit_score RAW desc
         4) id asc
     """
 
@@ -64,11 +65,6 @@ class SearchEngine:
         limit: int,
         w_token: float = 0.65,
     ) -> Tuple[List[Dict], int]:
-        """
-        Devuelve:
-          - lista de matches (ordenada)
-          - candidate_count usado
-        """
         cand_ids = self.candidate_ids(query_norm)
         candidate_count = len(cand_ids)
 
@@ -86,19 +82,16 @@ class SearchEngine:
                     "id": rec.id,
                     "name": rec.full_name,
 
-                    # valores RAW (para ordenar correctamente)
                     "_similarity_raw": combined_raw,
                     "_token_raw": token_score_raw,
                     "_edit_raw": edit_score_raw,
 
-                    # valores visibles (se redondean solo para output)
                     "similarity": round(combined_raw, 2),
                     "token_score": round(token_score_raw, 2),
                     "edit_score": round(edit_score_raw, 2),
                     "w_token": round(float(w_token), 3),
                 })
 
-        # Orden determinístico y correcto (con RAW)
         scored.sort(
             key=lambda m: (
                 -m["_similarity_raw"],
@@ -108,7 +101,6 @@ class SearchEngine:
             )
         )
 
-        # Limpiar campos internos antes de devolver
         for m in scored:
             m.pop("_similarity_raw", None)
             m.pop("_token_raw", None)

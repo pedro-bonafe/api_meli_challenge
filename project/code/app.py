@@ -1,3 +1,4 @@
+# code/app.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Dict, Optional, Tuple, List, Any
@@ -5,10 +6,10 @@ from collections import OrderedDict
 import os
 import time
 
-from matching import normalize
-from storage import build_repository
-from search_engine import SearchEngine, SearchConfig
-from metrics import Metrics
+from .matching import normalize
+from .storage import build_repository, get_repo_stats
+from .search_engine import SearchEngine, SearchConfig
+from .metrics import Metrics
 
 app = FastAPI(
     title="Name Matching API",
@@ -16,14 +17,15 @@ app = FastAPI(
         "Matching de nombres usando (token_set_ratio + ratio) con candidate generation por n-grams, "
         "cache LRU, explicabilidad y métricas."
     ),
-    version="1.4.0"
+    version="1.4.1"
 )
 
 engine: Optional[SearchEngine] = None
 metrics = Metrics()
 
+
 # -----------------------
-# LRU cache (pro)
+# LRU cache
 # -----------------------
 
 class LRUCache:
@@ -44,8 +46,10 @@ class LRUCache:
         if len(self._data) > self.maxsize:
             self._data.popitem(last=False)
 
+
 CACHE_MAX = int(os.getenv("CACHE_MAX", "256"))
 cache = LRUCache(maxsize=CACHE_MAX)
+
 
 # -----------------------
 # API Models
@@ -62,6 +66,7 @@ class MatchRequest(BaseModel):
         description="Si true, incluye results_by_id (mapa por ID). El orden garantizado está en results (lista)."
     )
 
+
 class MatchHit(BaseModel):
     id: int
     name: str
@@ -70,6 +75,7 @@ class MatchHit(BaseModel):
     edit_score: Optional[float] = None
     w_token: Optional[float] = None
 
+
 class MatchById(BaseModel):
     name: str
     similarity: float
@@ -77,11 +83,11 @@ class MatchById(BaseModel):
     edit_score: Optional[float] = None
     w_token: Optional[float] = None
 
+
 class MatchResponse(BaseModel):
-    # Orden garantizado: lista
     results: List[MatchHit]
-    # Opcional: acceso por id (el JSON object no garantiza orden)
     results_by_id: Optional[Dict[int, MatchById]] = None
+
 
 # -----------------------
 # Tie-break stats helper
@@ -89,21 +95,15 @@ class MatchResponse(BaseModel):
 
 def compute_tie_break_stats(matches: List[Dict[str, Any]]) -> Tuple[int, int, int, int]:
     """
-    Calcula stats por "grupos de empate" en similarity (a 2 decimales, tal como se muestra al usuario).
-    Para cada grupo (size>1), detecta si el desempate se resolvió por:
-      - token_score (si hay variación en token_score dentro del grupo)
-      - edit_score (si token_score no varía pero edit_score sí)
-      - id (si token y edit también empatan)
-
-    Retorna: (groups_total, by_token, by_edit, by_id)
+    Empates por similarity visible (2 decimales) y cómo se resolvieron.
     """
     if not matches:
         return (0, 0, 0, 0)
 
     groups_total = by_token = by_edit = by_id = 0
-
     i = 0
     n = len(matches)
+
     while i < n:
         sim = matches[i].get("similarity")
         j = i + 1
@@ -127,6 +127,7 @@ def compute_tie_break_stats(matches: List[Dict[str, Any]]) -> Tuple[int, int, in
 
     return (groups_total, by_token, by_edit, by_id)
 
+
 # -----------------------
 # Startup
 # -----------------------
@@ -139,16 +140,21 @@ def startup():
     max_candidates = int(os.getenv("MAX_CANDIDATES", "2000"))
     engine = SearchEngine(repo=repo, config=SearchConfig(ngram_n=ngram_n, max_candidates=max_candidates))
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
+
 @app.get("/metrics")
 def get_metrics():
-    return metrics.snapshot(topk=10)
+    snap = metrics.snapshot(topk=10)
+    snap["repo"] = get_repo_stats()
+    return snap
+
 
 # -----------------------
-# Core match (shared) with cache + metrics
+# Core match (shared)
 # -----------------------
 
 def run_match(
@@ -161,6 +167,7 @@ def run_match(
 ) -> Dict[str, Any]:
     assert engine is not None, "SearchEngine no inicializado"
 
+    # normalización estricta del input del cliente (como definimos en ipynb)
     q_norm = normalize(name)
     metrics.inc_request(q_norm)
 
@@ -180,11 +187,9 @@ def run_match(
     latency_ms = (time.perf_counter() - t0) * 1000.0
     metrics.add_search_stats(latency_ms=latency_ms, candidate_count=candidate_count)
 
-    # --- tie-break stats (por empates visibles en similarity) ---
     tie_groups_total, by_token, by_edit, by_id = compute_tie_break_stats(matches)
     metrics.add_tie_stats(tie_groups_total, by_token, by_edit, by_id)
 
-    # matches ya viene ordenado determinísticamente desde el engine
     if explain:
         results_list: List[Dict[str, Any]] = [
             {
@@ -199,17 +204,12 @@ def run_match(
         ]
     else:
         results_list = [
-            {
-                "id": m["id"],
-                "name": m["name"],
-                "similarity": m["similarity"],
-            }
+            {"id": m["id"], "name": m["name"], "similarity": m["similarity"]}
             for m in matches
         ]
 
     payload: Dict[str, Any] = {"results": results_list}
 
-    # Opcional: mapa por id (cumple literal el enunciado)
     if include_by_id:
         if explain:
             payload["results_by_id"] = {
@@ -224,19 +224,13 @@ def run_match(
             }
         else:
             payload["results_by_id"] = {
-                r["id"]: {
-                    "name": r["name"],
-                    "similarity": r["similarity"],
-                }
+                r["id"]: {"name": r["name"], "similarity": r["similarity"]}
                 for r in results_list
             }
 
     cache.set(key, payload)
     return payload
 
-# -----------------------
-# POST
-# -----------------------
 
 @app.post("/match", response_model=MatchResponse, response_model_exclude_none=True)
 def match_post(payload: MatchRequest):
@@ -249,9 +243,6 @@ def match_post(payload: MatchRequest):
         include_by_id=payload.include_by_id
     )
 
-# -----------------------
-# GET
-# -----------------------
 
 @app.get("/match", response_model=MatchResponse, response_model_exclude_none=True)
 def match_get(
