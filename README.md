@@ -94,6 +94,8 @@ Esto garantiza que:
 
 ## Cómo ejecutar la API
 
+* Pararse en el directorio /proyecto_meli/API/project
+
 ### Requisitos
 
 - Docker
@@ -101,6 +103,24 @@ Esto garantiza que:
 - No es necesario tener Python instalado localmente
 
 ---
+
+
+
+## Ejecución deffault (standardized_dedupe)
+
+**Ejecución con csv:**
+
+```bash
+docker compose up --build api_csv
+
+```
+
+**Ejecución con SQLite:**
+
+```bash
+docker compose up --build api_sqlite
+
+```
 
 ## Modos de ejecución (usando `.env`)
 
@@ -136,23 +156,6 @@ SQLITE_FORCE_RELOAD=true
 ```bash
 docker compose --env-file .env.standardized_dedupe up --build api_sqlite
 ```
-
-### Ejecución modo deffault (standardized_dedupe)
-
-**Ejecución con csv:**
-
-```bash
-docker compose up --build api_csv
-
-```
-
-**Ejecución con SQLite:**
-
-```bash
-docker compose up --build api_sqlite
-
-```
-
 
 ### Endpoints disponibles
 
